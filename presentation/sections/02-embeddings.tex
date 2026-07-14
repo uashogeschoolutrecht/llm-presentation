@@ -124,56 +124,6 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Dot product: scoring a candidate token}
-  \small
-  Candidate token \(j\) receives the logit
-  \(z_j=\mathbf{h}^{\mathsf T}\mathbf{w}_j\): context vector \(\mathbf{h}\) is
-  compared with candidate vector \(\mathbf{w}_j\).
-
-  \begin{columns}[T]
-    \begin{column}{0.41\textwidth}
-      \centering
-      \begin{tikzpicture}[scale=0.72, >=Latex]
-        \coordinate (o) at (0,0);
-        \draw[->, very thick, tokenblueborder] (o) -- (4.0,0.7)
-          node[right] {\(\mathbf{h}\)};
-        \draw[->, very thick, tokengreenborder] (o) -- (2.8,2.7)
-          node[above] {\(\mathbf{w}_j\)};
-        \draw (1.0,0.18) arc[start angle=10,end angle=44,radius=1.05]
-          node[midway, right] {\(\theta\)};
-      \end{tikzpicture}
-
-      \[
-        \mathbf{h}^{\mathsf T}\mathbf{w}_j
-        =\lVert\mathbf{h}\rVert
-         \lVert\mathbf{w}_j\rVert\cos\theta
-      \]
-    \end{column}
-    \begin{column}{0.55\textwidth}
-      \begin{block}{Dot-product intuition}
-        The score grows when the vectors point in similar directions, but also
-        when either vector is longer.
-      \end{block}
-
-      \begin{block}{Cosine removes length}
-        \[
-          \cos\theta=
-          \frac{\mathbf{h}^{\mathsf T}\mathbf{w}_j}
-          {\lVert\mathbf{h}\rVert\lVert\mathbf{w}_j\rVert}.
-        \]
-        Dividing out both lengths keeps only directional similarity.
-      \end{block}
-    \end{column}
-  \end{columns}
-
-  \vspace{-0.2em}
-  \begin{alertblock}{Connection to cross-entropy}
-    \footnotesize
-    Dot products assign scores to candidate tokens. Cross-entropy pushes the
-    correct token's score up relative to the competing tokens.
-  \end{alertblock}
-\end{frame}
-
 \begin{frame}{Cross-entropy strongly penalizes low probability}
   \small
   Let \(p=p(y\mid x)\) be the probability assigned to the correct next token.
@@ -224,11 +174,11 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Unembedding: back from vectors to tokens}
+\begin{frame}{Unembedding is needed to make predictions}
   \small
-  For now, treat the Transformer as a black box. After ``whatever the
-  Transformer does'', it leaves us with an internal vector that represents the
-  current context.
+  To evaluate the loss \(L\), the model must make a next-token prediction.
+  For now, treat the Transformer as a black box: it turns the input token
+  vectors into a context vector \(\mathbf h\).
 
   \begin{center}
     \begin{tikzpicture}[
@@ -237,13 +187,13 @@
       >=Latex
     ]
       \node[stage, fill=tensorpurple, draw=tensorpurpleborder] (transformer)
-        {Transformer\\processing};
+        {Transformer\\context \(\mathbf h\)};
       \node[stage, fill=tokenorange, draw=tokenorangeborder,
         right=0.9cm of transformer] (unembed)
         {learned unembedding\\matrix \(W_U\)};
       \node[stage, fill=tokenblue, draw=tokenblueborder,
         right=0.9cm of unembed] (logits)
-        {one raw score per token\\\textbf{logits}};
+        {one score per token\\logits \(\mathbf z\)};
       \draw[->, thick] (transformer) -- (unembed);
       \draw[->, thick] (unembed) -- (logits);
     \end{tikzpicture}
@@ -252,19 +202,72 @@
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
       \begin{block}{Embedding \(W_E\)}
-        Token ID \(\longrightarrow{}\) vector
+        Token ID \(\longrightarrow{}\) input token vector
       \end{block}
     \end{column}
     \begin{column}{0.47\textwidth}
       \begin{block}{Unembedding \(W_U\)}
-        Vector \(\longrightarrow{}\) token scores
+        Context vector \(\longrightarrow{}\) token scores
       \end{block}
     \end{column}
   \end{columns}
 
-  \begin{alertblock}{Scores are not probabilities}
-    Logits are arbitrary real numbers. To predict the next token, we still need
-    to turn them into probabilities. That is the job of \textbf{softmax}.
+  \begin{alertblock}{Why training needs both matrices}
+    \(W_E\) supplies the vectors that enter the Transformer. \(W_U\) supplies
+    one candidate vector for every possible next token, letting the model
+    produce the scores needed for its prediction and loss.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Dot product: scoring a candidate token}
+  \small
+  Input token vectors come from columns of \(W_E\). After the Transformer has
+  combined their context, candidate token \(j\) uses column
+  \(\mathbf w_j={(W_U)}_{:,j}\). Its logit is the dot product
+  \(z_j=\mathbf{h}^{\mathsf T}\mathbf{w}_j\).
+
+  \begin{columns}[T]
+    \begin{column}{0.41\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=0.72, >=Latex]
+        \coordinate (o) at (0,0);
+        \draw[->, very thick, tokenblueborder] (o) -- (4.0,0.7)
+          node[right] {\(\mathbf{h}\)};
+        \draw[->, very thick, tokengreenborder] (o) -- (2.8,2.7)
+          node[above] {\(\mathbf{w}_j\)};
+        \draw (1.0,0.18) arc[start angle=10,end angle=44,radius=1.05]
+          node[midway, right] {\(\theta\)};
+      \end{tikzpicture}
+
+      \[
+        \mathbf{h}^{\mathsf T}\mathbf{w}_j
+        =\lVert\mathbf{h}\rVert
+         \lVert\mathbf{w}_j\rVert\cos\theta
+      \]
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \footnotesize
+      \begin{block}{Dot-product intuition}
+        The score grows when the vectors point in similar directions, but also
+        when either vector is longer.
+      \end{block}
+
+      \begin{block}{Cosine removes length}
+        \[
+          \cos\theta=
+          \frac{\mathbf{h}^{\mathsf T}\mathbf{w}_j}
+          {\lVert\mathbf{h}\rVert\lVert\mathbf{w}_j\rVert}.
+        \]
+        Dividing out both lengths keeps only directional similarity.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.2em}
+  \begin{alertblock}{Connection to cross-entropy}
+    \footnotesize
+    Dot products produce candidate scores. Cross-entropy pushes the correct
+    token's score above its competing tokens.
   \end{alertblock}
 \end{frame}
 

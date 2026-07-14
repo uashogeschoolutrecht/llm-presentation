@@ -467,3 +467,225 @@
     producing the contextual representations used to predict the next token.
   \end{alertblock}
 \end{frame}
+
+\begin{frame}{Inside the per-token MLP: factual associations}
+  \small
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum height=1.0cm,
+        minimum width=2.55cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder] (context)
+        {one token's context\\``Michael Jordan plays \ldots{}''};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.55cm of context] (key)
+        {\(W_{\mathrm{up}}\)\\pattern match \(a_i\)};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.55cm of key] (value)
+        {\(W_{\mathrm{down}}\)\\add value \(\mathbf v_i\)};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.55cm of value] (prediction)
+        {higher score for\\\texttt{basketball}};
+      \draw[->, thick] (context) -- (key);
+      \draw[->, thick] (key) -- (value);
+      \draw[->, thick] (value) -- (prediction);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.5em}
+  \[
+    \operatorname{MLP}(\mathbf x)
+      =\sigma(\mathbf xW_{\mathrm{up}})W_{\mathrm{down}}
+      =\sum_i a_i\mathbf v_i,
+    \qquad
+    a_i=\sigma(\mathbf x\mathbf k_i).
+  \]
+  \vspace{-1.0em}
+  \begin{center}
+    \scriptsize
+    \(\mathbf k_i\) is column \(i\) of \(W_{\mathrm{up}}\);
+    \(\mathbf v_i\) is row \(i\) of \(W_{\mathrm{down}}\).
+  \end{center}
+
+  \vspace{-0.4em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Geva et al. (2021)}
+        \scriptsize
+        \href{https://arxiv.org/abs/2012.14913}{\emph{Transformer Feed-Forward
+        Layers Are Key-Value Memories}.}
+        They found that \(W_{\mathrm{up}}\) directions respond to interpretable
+        textual patterns, while corresponding \(W_{\mathrm{down}}\) values favor
+        plausible output tokens.
+      \end{block}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Meng et al. (2022): ROME}
+        \scriptsize
+        \href{https://arxiv.org/abs/2202.05262}{\emph{Locating and Editing
+        Factual Associations in GPT}.}
+        Causal tracing localized factual predictions to middle-layer MLPs;
+        rank-one changes to their feed-forward weights could update particular
+        factual associations.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.4em}
+  \begin{alertblock}{Important nuance}
+    \footnotesize
+    ``Michael Jordan plays basketball'' is illustrative. Evidence points to
+    distributed, compositional storage---not one complete sentence in one neuron.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{GPT-3: sizes of the attention projection matrices}
+  \small
+  GPT-3 uses \(H=96\) attention heads in each of \(N=96\) layers, with
+
+  \[
+    d_q=d_k=d_v=128,
+    \qquad
+    d_{\mathrm{embed}}=12{,}288.
+  \]
+
+  \vspace{-0.8em}
+  \begin{block}{From separate heads to one combined projection}
+    \centering
+    \(H d_q=H d_k=H d_v=96\cdot128=12{,}288=d_{\mathrm{embed}}\).
+    Thus each combined projection matrix is square.
+  \end{block}
+
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{@{}lccc@{}}
+      \toprule
+      Matrix & Shape in one layer & Parameters per layer & Across 96 layers \\
+      \midrule
+      \(W_Q\) & \(12{,}288\times12{,}288\) & \(150{,}994{,}944\) & \(14{,}495{,}514{,}624\) \\
+      \(W_K\) & \(12{,}288\times12{,}288\) & \(150{,}994{,}944\) & \(14{,}495{,}514{,}624\) \\
+      \(W_V\) & \(12{,}288\times12{,}288\) & \(150{,}994{,}944\) & \(14{,}495{,}514{,}624\) \\
+      \(W_O\) & \(12{,}288\times12{,}288\) & \(150{,}994{,}944\) & \(14{,}495{,}514{,}624\) \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{-0.4em}
+  \begin{alertblock}{Attention projections across the whole model}
+    \centering
+    \(4\times14{,}495{,}514{,}624
+      =57{,}982{,}058{,}496\) learned weights, excluding biases.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{GPT-3: the MLP up and down projections}
+  \small
+  Attention moves information between tokens. The \textbf{MLP} then transforms
+  each token vector independently, using the same two matrices at every position.
+
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum height=0.95cm,
+        align=center},
+      >=Latex
+    ]
+      \node[stage, minimum width=1.55cm, fill=tokenblue,
+        draw=tokenblueborder] (input)
+        {token vector\\\(d=12{,}288\)};
+      \node[stage, minimum width=2.0cm, fill=tokenorange,
+        draw=tokenorangeborder, right=0.35cm of input] (up)
+        {up-project\\with \(W_{\mathrm{up}}\)};
+      \node[stage, minimum width=1.7cm, fill=tokengreen,
+        draw=tokengreenborder, right=0.35cm of up] (wide)
+        {wide vector\\\(d_{\mathrm{ff}}=49{,}152\)};
+      \node[stage, minimum width=1.25cm, fill=tensorpurple,
+        draw=tensorpurpleborder, right=0.35cm of wide] (activation)
+        {nonlinear\\activation};
+      \node[stage, minimum width=2.0cm, fill=tokenorange,
+        draw=tokenorangeborder, right=0.35cm of activation] (down)
+        {down-project\\with \(W_{\mathrm{down}}\)};
+      \node[stage, minimum width=1.55cm, fill=tokenblue,
+        draw=tokenblueborder, right=0.35cm of down] (output)
+        {MLP update\\\(d=12{,}288\)};
+      \draw[->, thick] (input) -- (up);
+      \draw[->, thick] (up) -- (wide);
+      \draw[->, thick] (wide) -- (activation);
+      \draw[->, thick] (activation) -- (down);
+      \draw[->, thick] (down) -- (output);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.5em}
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{@{}lccc@{}}
+      \toprule
+      Matrix & Shape in one layer & Parameters per layer & Across 96 layers \\
+      \midrule
+      \(W_{\mathrm{up}}\) & \(12{,}288\times49{,}152\)
+        & \(603{,}979{,}776\) & \(57{,}982{,}058{,}496\) \\
+      \(W_{\mathrm{down}}\) & \(49{,}152\times12{,}288\)
+        & \(603{,}979{,}776\) & \(57{,}982{,}058{,}496\) \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{-0.4em}
+  \begin{alertblock}{Most GPT-3 parameters are in its MLPs}
+    \centering
+    Together: \(2\times57{,}982{,}058{,}496
+      =115{,}964{,}116{,}992\) weights---about \(66\%\) of GPT-3.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Model scale: GPT-3 175B (2020) vs. Gemma 4 31B (2026)}
+  \small
+  Both are Transformer models, but Gemma 4 reaches a much smaller parameter
+  budget through a narrower, more modern architecture.
+
+  \begin{center}
+    \begin{tikzpicture}[font=\small]
+      \node[anchor=east] at (0,0.55) {GPT-3};
+      \fill[tokenblueborder] (0,0.25) rectangle (10.5,0.85);
+      \node[anchor=west, text=white, font=\bfseries]
+        at (0.15,0.55) {175.18B parameters};
+
+      \node[anchor=east] at (0,-0.35) {Gemma 4};
+      \fill[tokenorangeborder] (0,-0.65) rectangle (1.84,-0.05);
+      \node[anchor=west, font=\bfseries]
+        at (2.02,-0.35) {30.7B parameters};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.7em}
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{@{}lrrrr@{}}
+      \toprule
+      Parameter family & GPT-3 175B & Share &
+        \href{https://chatgpt.com/share/6a56a6e4-0c14-83ed-849e-93f362e5f1c3}{Gemma 4 estimate} & Share \\
+      \midrule
+      Embedding and output & \(1.24\)B & \(0.7\%\) & \(\approx1.41\)B & \(\approx4.6\%\) \\
+      Attention: \(Q,K,V,O\) & \(57.98\)B & \(33.1\%\) & \(\approx6.10\)B & \(\approx19.8\%\) \\
+      MLP: up and down projections & \(115.96\)B & \(66.2\%\) & \(\approx13.88\)B & \(\approx45.2\%\) \\
+      Vision encoder and other weights & \(\approx0\)B & \(\approx0\%\) & \(\approx9.35\)B & \(\approx30.4\%\) \\
+      \midrule
+      \textbf{Total} & \textbf{175.18B} & \textbf{100\%} &
+        \href{https://ai.google.dev/gemma/docs/core/model_card_4}{\textbf{30.7B}} & \textbf{\(\approx100\%\)} \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{-0.6em}
+  \begin{alertblock}{About \(5.7\times\) fewer parameters}
+    \footnotesize
+    Gemma 4 uses 60 layers, a smaller embedding dimension, grouped-query and
+    hybrid local/global attention, plus a vision encoder. Size alone is not a
+    measure of capability; architecture, data, and training matter enormously.
+  \end{alertblock}
+
+\end{frame}

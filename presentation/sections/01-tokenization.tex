@@ -1,0 +1,241 @@
+% !TEX root = ../main.tex
+
+\section{Tokens}
+
+\begin{frame}{An LLM is a next-token predictor}
+  \small
+  A generative model learns a probability distribution over what could come
+  next. For a language model, the possible outputs are tokens from vocabulary
+  $V$.
+
+  \vspace{0.5em}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum height=0.9cm,
+        align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder,
+        minimum width=3.7cm] (context) {\texttt{The cat sat on the}};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.8cm of context, minimum width=3.3cm] (model)
+        {language model};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.8cm of model, minimum width=3.0cm] (next)
+        {next-token\\probabilities};
+      \draw[->, thick] (context) -- (model);
+      \draw[->, thick] (model) -- (next);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.3em}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{tabular}{lc}
+        \textbf{Candidate} & \textbf{Probability} \\
+        \hline
+        \tokenbox[tokengreen]{mat}   & $0.46$ \\
+        \tokenbox[tokengreen]{floor} & $0.21$ \\
+        \tokenbox[tokengreen]{sofa}  & $0.12$ \\
+        other tokens                 & $0.21$
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \begin{enumerate}
+        \item Choose or sample one next token.
+        \item Append it to the existing sequence.
+        \item Feed the longer sequence back into the model.
+        \item Repeat until generation stops.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+
+  \vfill
+  \begin{alertblock}{Why begin with tokens?}
+    The model generates one token at a time, so we first need to understand
+    what tokens are and how text becomes a token sequence.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{A token is a discrete piece of data}
+  \begin{center}
+    \begin{tikzpicture}[
+      item/.style={draw, rounded corners=3pt, minimum width=3.2cm,
+        minimum height=2.4cm, align=center, line width=0.8pt},
+      label/.style={font=\bfseries}
+    ]
+      \node[item, fill=tokenblue, draw=tokenblueborder] (text) {
+        \textbf{Text}\\[0.4em]
+        \texttt{ing}\qquad\texttt{,}\\[0.35em]
+        {\scriptsize subword or punctuation}
+      };
+      \node[item, fill=tokenorange, draw=tokenorangeborder,
+        right=0.5cm of text] (image) {
+        \textbf{Image}\\[0.35em]
+        \begin{tikzpicture}[scale=0.25]
+          \foreach \x in {0,...,3}
+            \foreach \y in {0,...,3}
+              \draw[fill=white] (\x,\y) rectangle +(1,1);
+          \fill[tokenorangeborder!65] (1,1) rectangle +(2,2);
+          \draw[line width=1pt] (1,1) rectangle +(2,2);
+        \end{tikzpicture}\\[-0.2em]
+        {\scriptsize patch or visual code}
+      };
+      \node[item, fill=tokengreen, draw=tokengreenborder,
+        right=0.5cm of image] (audio) {
+        \textbf{Audio}\\[0.35em]
+        \begin{tikzpicture}[x=0.18cm,y=0.18cm]
+          \draw[tokengreenborder, line width=1pt]
+            plot[smooth] coordinates {(0,2) (1,3) (2,0) (3,4)
+              (4,1) (5,3) (6,2) (7,2)};
+        \end{tikzpicture}\\[0.25em]
+        {\scriptsize short segment or codec code}
+      };
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{block}{Common idea}
+    A model processes a sequence of numbered units. The tokenizer decides
+    where one unit ends and the next begins.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Text can be split in different ways}
+  \small
+  Consider the same input: \texttt{unbelievable!}
+
+  \vspace{0.8em}
+  \begin{tabular}{@{}p{2.2cm}p{8.8cm}@{}}
+    \textbf{Characters} &
+      \tokenbox{u}\,\tokenbox{n}\,\tokenbox{b}\,\tokenbox{e}\,
+      \tokenbox{l}\,\tokenbox{i}\,\tokenbox{e}\,\tokenbox{v}\,
+      \tokenbox{a}\,\tokenbox{b}\,\tokenbox{l}\,\tokenbox{e}\,
+      \tokenbox{!} \\[0.8em]
+    \textbf{Words} &
+      \tokenbox[tokenorange]{unbelievable}\,\tokenbox[tokenorange]{!}
+      \\[0.8em]
+    \textbf{Subwords} &
+      \tokenbox[tokengreen]{un}\,\tokenbox[tokengreen]{believ}\,
+      \tokenbox[tokengreen]{able}\,\tokenbox[tokengreen]{!}
+  \end{tabular}
+
+  \vfill
+  \begin{alertblock}{Why subwords?}
+    Frequent strings can become one token, while rare words can still be
+    assembled from smaller pieces. A token is therefore not necessarily a
+    character or a complete word.
+  \end{alertblock}
+
+  {\scriptsize The subword split above is illustrative; the result depends on
+  the tokenizer and its training data.}
+\end{frame}
+
+\begin{frame}{How repeated strings become tokens: toy BPE}
+  \footnotesize
+  \textbf{Byte Pair Encoding (BPE)} starts with characters; each word in this
+  toy corpus occurs once.
+
+  \vspace{0.15em}
+  {\centering
+    \tokenbox{play}\quad
+    \tokenbox{played}\quad
+    \tokenbox{player}\quad
+    \tokenbox{playing}\par
+  }
+
+  At every round, count \emph{adjacent pairs across the whole corpus}, then
+  replace one most-frequent pair with a new symbol.
+
+  \vspace{0.2em}
+  \begin{columns}[T]
+    \begin{column}{0.59\textwidth}
+      \centering
+      {\scriptsize
+      \begin{tabular}{clcl}
+        \textbf{Round} & \textbf{Selected pair} & \textbf{Count} &
+          \textbf{Common prefix} \\
+        \hline
+        0 & --                 & -- & \texttt{p l a y} \\
+        1 & \texttt{p + l}    & 4  & \texttt{pl a y} \\
+        2 & \texttt{pl + a}   & 4  & \texttt{pla y} \\
+        3 & \texttt{pla + y}  & 4  & \texttt{play} \\
+      \end{tabular}
+      }
+
+      \vspace{0.4em}
+      {\scriptsize Initially several pairs tie at count 4; a fixed tie-breaking
+      rule chooses which equally frequent pair is merged first.}
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \begin{block}{What does count 4 mean?}
+        The selected pair appears once in each of the four words, for four
+        occurrences across the corpus.
+      \end{block}
+
+      \centering
+      After round 3:\par\smallskip
+      {\scriptsize
+      \begin{tabular}{rcl}
+        \texttt{played} & $\rightarrow$ &
+          \texttt{[play][e][d]} \\
+        \texttt{player} & $\rightarrow$ &
+          \texttt{[play][e][r]}
+      \end{tabular}
+      }
+    \end{column}
+  \end{columns}
+
+  \vfill
+  \begin{alertblock}{Stopping criterion}
+    This example stops after round 3 only to highlight \texttt{play}. Real BPE
+    continues to a merge budget or target vocabulary size. Here, the next merge
+    is \texttt{play + e}, which occurs twice.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{A vocabulary maps tokens to integer IDs}
+  \begin{columns}[T]
+    \begin{column}{0.43\textwidth}
+      \centering
+      \textbf{Tiny illustrative vocabulary}
+
+      \vspace{0.5em}
+      \begin{tabular}{rcl}
+        \textbf{ID} & & \textbf{Token} \\
+        \hline
+        7   & $\leftrightarrow$ & \tokenbox[tokenorange]{!} \\
+        41  & $\leftrightarrow$ & \tokenbox[tokenorange]{<space>} \\
+        88  & $\leftrightarrow$ & \tokenbox[tokenorange]{er} \\
+        314 & $\leftrightarrow$ & \tokenbox[tokenorange]{play} \\
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.53\textwidth}
+      Input begins with a space: \texttt{player!}
+      \[
+        \tokenbox{<space>}\,
+        \tokenbox{play}\,
+        \tokenbox{er}\,
+        \tokenbox{!}
+      \]
+      \[
+        \longrightarrow [41,\,314,\,88,\,7]
+      \]
+
+      \begin{block}{IDs are labels, not quantities}
+        ID 314 is not ``larger in meaning'' than ID 88. The numbers only index
+        entries in a fixed list.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vfill
+  \small Whitespace and punctuation also carry information. Depending on the
+  tokenizer, a space may be separate or attached to a neighboring token.
+
+  \medskip
+  \begin{center}
+    \textbf{The complete collection of all available tokens is the vocabulary,
+    denoted $V$.}
+  \end{center}
+\end{frame}

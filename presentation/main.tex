@@ -1,0 +1,121 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{svg}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
+
+\graphicspath{{assets/images/}}
+\svgpath{{assets/svg/}}
+\svgsetup{
+  inkscapelatex=false,
+  inkscapepath=build/svg-inkscape/
+}
+
+\definecolor{tokenblue}{HTML}{DCEBFA}
+\definecolor{tokenblueborder}{HTML}{2B5797}
+\definecolor{tokenorange}{HTML}{FCE8D5}
+\definecolor{tokenorangeborder}{HTML}{B85C00}
+\definecolor{tokengreen}{HTML}{E4F3E5}
+\definecolor{tokengreenborder}{HTML}{2E7D32}
+\definecolor{tensorpurple}{HTML}{EEE6F7}
+\definecolor{tensorpurpleborder}{HTML}{6A3D9A}
+
+\newcommand{\tokenbox}[2][tokenblue]{%
+  \tikz[baseline= (token.base)]{%
+    \node[
+      draw=tokenblueborder,
+      fill=#1,
+      rounded corners=2pt,
+      inner xsep=5pt,
+      inner ysep=3pt
+    ] (token) {\strut\texttt{#2}};%
+  }%
+}
+
+\title[Mathematics Behind LLMs]{The Mathematics Behind Large Language Models}
+\subtitle{From Tokens to Tensors}
+\author[C.J. van Gemeren]{Coert van Gemeren, Ph.D.}
+\institute[HU]{University of Applied Sciences Utrecht}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage{}
+\end{frame}
+
+\begin{frame}{Agenda}
+  \tableofcontents
+\end{frame}
+
+\input{sections/01-tokenization}
+\input{sections/02-embeddings}
+\input{sections/03-attention}
+
+\begin{frame}{Recommended next step: dive deeper with 3Blue1Brown}
+  \small
+  Start with the short LLM primer between Chapters 4 and 5, then continue with
+  Chapters 5 and 6 of 3Blue1Brown's \emph{Neural Networks} lecture series.
+
+  \vspace{0.5em}
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Start here}
+        \centering
+        \textbf{Large Language Models explained briefly}
+
+        \smallskip
+        \footnotesize
+        A concise bridge from next-token prediction and training to
+        Transformer architecture.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Chapter 5}
+        \centering
+        \textbf{Transformers and LLMs}
+
+        \smallskip
+        \footnotesize
+        Tokens, embeddings, unembedding, softmax, and the overall architecture.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Chapter 6}
+        \centering
+        \textbf{Attention, step by step}
+
+        \smallskip
+        \footnotesize
+        A visual walkthrough of queries, keys, values, and attention weights.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vfill
+  \begin{center}
+    \href{https://www.youtube.com/watch?v=LPZh9BOjkQs}{%
+      \beamergotobutton{Watch Large Language Models explained briefly}}
+    \hspace{0.7em}
+    \href{https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi}{%
+      \beamergotobutton{Open the full playlist}}
+
+    \medskip
+    \scriptsize
+    Both buttons are clickable in the PDF\@.
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering
+  \Huge Questions?
+\end{frame}
+
+\end{document}

@@ -1,0 +1,593 @@
+% !TEX root = ../main.tex
+
+\section{Vectors and embeddings}
+
+\begin{frame}{Scalar, vector, matrix, tensor}
+  \small
+  These names describe how numbers are arranged into axes:
+
+  \vspace{0.7em}
+  \begin{tabular}{@{}p{2.0cm}p{4.7cm}p{3.9cm}@{}}
+    \toprule
+    \textbf{Name} & \textbf{Example} & \textbf{Rank and shape} \\
+    \midrule
+    Scalar & \(s=3.2\) & rank 0, shape \(()\) \\[0.65em]
+    Vector & \(\mathbf{x}=\begin{bmatrix}0.2&-0.7&0.4\end{bmatrix}\)
+      & rank 1, shape \((3)\) \\[0.65em]
+    Matrix & \(X=\begin{bmatrix}0.2&-0.7&0.4\\0.1&0.8&-0.3\end{bmatrix}\)
+      & rank 2, shape \((2,3)\) \\[0.65em]
+    Tensor & \(T=\left[\begin{matrix}X_1\\X_2\\\vdots\end{matrix}\right]\)
+      & rank 3, shape \((b,n,d)\) \\
+    \bottomrule
+  \end{tabular}
+
+  \vfill
+  \begin{block}{Terminology}
+    A tensor is the general object; a scalar, vector, and matrix are rank-0,
+    rank-1, and rank-2 tensors. Shape gives the size along every axis.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Embedding lookup: from an ID to a vector}
+  \small
+  Let \(|V|\) be the number of tokens. The embedding dimension \(d\) is a model
+  hyperparameter: the chosen width of every token vector. The model stores the
+  learnable \emph{embedding matrix} \(W_E\):
+  \[
+    W_E\in\mathbb{R}^{d\times |V|}.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[>=Latex]
+      \node[draw=tokenblueborder, fill=tokenblue, rounded corners,
+        minimum width=1.6cm, minimum height=0.8cm] (id) {ID \(i=2\)};
+
+      \node[right=2.2cm of id] (matrix) {\(
+        W_E=\begin{bmatrix}
+          0.1 & \phantom{-}0.7 & \colorbox{tokengreen}{\(-0.3\)} & 0.0\\
+          -0.4 & \phantom{-}0.2 &
+          \colorbox{tokengreen}{\(\phantom{-}0.8\)} & -0.2\\
+          0.6 & -0.1 &
+          \colorbox{tokengreen}{\(\phantom{-}0.5\)} & \phantom{-}0.9
+        \end{bmatrix}\)};
+
+      \node[draw=tokengreenborder, fill=tokengreen, rounded corners,
+        right=1.2cm of matrix, align=center] (vector)
+        {\(\mathbf{e}_i=(W_E)_{:,i}\)\\[0.2em]
+         \(=[-0.3,0.8,0.5]^{\mathsf T}\)};
+
+      \draw[->, thick] (id) -- node[above]{select column} (matrix);
+      \draw[->, thick] (matrix) -- (vector);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{block}{Lookup versus learning}
+    During a forward pass, lookup simply selects a column. During training,
+    gradients update the values in every token column. Over many examples,
+    the token vectors develop meaningful geometric relationships based on how
+    the tokens are used.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Training learns the embedding values}
+  \small
+  The embedding matrix \(W_E\) is a set of model parameters. Token IDs select its
+  columns, but next-token training determines the numbers stored in them.
+
+  \vspace{0.4em}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum height=1.15cm,
+        minimum width=2.35cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder] (initial)
+        {\textbf{1. Initialize}\\small random \(W_E\)};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.42cm of initial] (predict)
+        {\textbf{2. Predict}\\next token};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.42cm of predict] (loss)
+        {\textbf{3. Measure}\\loss \(L\)};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.42cm of loss] (update)
+        {\textbf{4. Update}\\parameters};
+      \draw[->, thick] (initial) -- (predict);
+      \draw[->, thick] (predict) -- (loss);
+      \draw[->, thick] (loss) -- (update);
+      \draw[->, thick, rounded corners]
+        (update.south) -- ++(0,-0.35) -| (predict.south);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Next-token loss}
+        If the correct next token is \(y\), the cross-entropy contribution is
+        \[
+          L=-\log p(y\mid x).
+        \]
+        High probability for \(y\) gives a small loss; low probability gives a
+        large loss.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Learning from the loss}
+        Backpropagation computes \(\nabla_{W_E}L\). An optimizer with learning rate
+        \(\eta{}\) updates the matrix:
+        \[
+          W_E\leftarrow W_E-\eta\nabla_{W_E}L.
+        \]
+        Repeating this loop gives the columns useful values.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Dot product: scoring a candidate token}
+  \small
+  Candidate token \(j\) receives the logit
+  \(z_j=\mathbf{h}^{\mathsf T}\mathbf{w}_j\): context vector \(\mathbf{h}\) is
+  compared with candidate vector \(\mathbf{w}_j\).
+
+  \begin{columns}[T]
+    \begin{column}{0.41\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=0.72, >=Latex]
+        \coordinate (o) at (0,0);
+        \draw[->, very thick, tokenblueborder] (o) -- (4.0,0.7)
+          node[right] {\(\mathbf{h}\)};
+        \draw[->, very thick, tokengreenborder] (o) -- (2.8,2.7)
+          node[above] {\(\mathbf{w}_j\)};
+        \draw (1.0,0.18) arc[start angle=10,end angle=44,radius=1.05]
+          node[midway, right] {\(\theta\)};
+      \end{tikzpicture}
+
+      \[
+        \mathbf{h}^{\mathsf T}\mathbf{w}_j
+        =\lVert\mathbf{h}\rVert
+         \lVert\mathbf{w}_j\rVert\cos\theta
+      \]
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Dot-product intuition}
+        The score grows when the vectors point in similar directions, but also
+        when either vector is longer.
+      \end{block}
+
+      \begin{block}{Cosine removes length}
+        \[
+          \cos\theta=
+          \frac{\mathbf{h}^{\mathsf T}\mathbf{w}_j}
+          {\lVert\mathbf{h}\rVert\lVert\mathbf{w}_j\rVert}.
+        \]
+        Dividing out both lengths keeps only directional similarity.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.2em}
+  \begin{alertblock}{Connection to cross-entropy}
+    \footnotesize
+    Dot products assign scores to candidate tokens. Cross-entropy pushes the
+    correct token's score up relative to the competing tokens.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Cross-entropy strongly penalizes low probability}
+  \small
+  Let \(p=p(y\mid x)\) be the probability assigned to the correct next token.
+  Its loss is \(L(p)=-\log p\) (using the natural logarithm).
+
+  \begin{center}
+    \begin{tikzpicture}[x=9.2cm, y=0.88cm, >=Latex]
+      \fill[tokenorange, opacity=0.65] (0,0) rectangle (0.25,3.45);
+      \fill[tokengreen, opacity=0.65] (0.75,0) rectangle (1,3.45);
+
+      \draw[->, thick] (0,0) -- (1.08,0)
+        node[below right=1pt] {\(p\)};
+      \draw[->, thick] (0,0) -- (0,3.55)
+        node[above left] {\(L=-\log p\)};
+
+      \foreach \x/\label in {0.1/{0.1},0.5/{0.5},0.9/{0.9},1/{1.0}} {
+        \draw (\x,0.06) -- (\x,-0.06) node[below] {\(\label\)};
+      }
+      \foreach \y in {1,2,3} {
+        \draw (0.007,\y) -- (-0.007,\y) node[left] {\(\y\)};
+      }
+
+      \draw[very thick, tokenblueborder, domain=0.04:1, samples=100,
+        variable=\p]
+        plot ({\p},{-ln(\p)});
+
+      \fill[tokenorangeborder] (0.1,2.3026) circle (2.3pt);
+      \node[anchor=west, fill=white, inner sep=2pt]
+        at (0.13,2.55) {\(p=0.10 \Rightarrow L\approx2.30\)};
+
+      \fill[tokenblueborder] (0.5,0.6931) circle (2.3pt);
+      \node[anchor=south west, fill=white, inner sep=2pt]
+        at (0.51,0.78) {\(p=0.50 \Rightarrow L\approx0.69\)};
+
+      \fill[tokengreenborder] (0.9,0.1054) circle (2.3pt);
+      \node[anchor=south east, fill=white, inner sep=2pt]
+        at (0.88,0.18) {\(p=0.90 \Rightarrow L\approx0.11\)};
+
+      \node[tokenorangeborder, anchor=west] at (0.02,3.25)
+        {\(p\to0 \Rightarrow L\to\infty\)};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.15em}
+  \begin{alertblock}{Training signal}
+    A confident wrong prediction receives a large penalty; assigning the
+    correct token probability near \(1\) drives its loss toward \(0\).
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Unembedding: back from vectors to tokens}
+  \small
+  For now, treat the Transformer as a black box. After ``whatever the
+  Transformer does'', it leaves us with an internal vector that represents the
+  current context.
+
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum width=2.65cm,
+        minimum height=1.05cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder] (transformer)
+        {Transformer\\processing};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.9cm of transformer] (unembed)
+        {learned unembedding\\matrix \(W_U\)};
+      \node[stage, fill=tokenblue, draw=tokenblueborder,
+        right=0.9cm of unembed] (logits)
+        {one raw score per token\\\textbf{logits}};
+      \draw[->, thick] (transformer) -- (unembed);
+      \draw[->, thick] (unembed) -- (logits);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Embedding \(W_E\)}
+        Token ID \(\longrightarrow{}\) vector
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Unembedding \(W_U\)}
+        Vector \(\longrightarrow{}\) token scores
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Scores are not probabilities}
+    Logits are arbitrary real numbers. To predict the next token, we still need
+    to turn them into probabilities. That is the job of \textbf{softmax}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{From logits to probabilities: softmax}
+  \small
+  The model produces one raw score, or \emph{logit} \(z_j\), for every token
+  \(j\in V\). Logits can be any real numbers and do not have to sum to \(1\).
+
+  \vspace{0.3em}
+  \begin{columns}[c]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \textbf{Normalize all vocabulary scores together}
+      \[
+        p_j=p(y=j\mid x)
+        =\frac{e^{z_j}}{\displaystyle\sum_{k\in V}e^{z_k}}
+      \]
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item \(e^{z_j}>0\) makes every result positive.
+        \item The shared denominator makes
+          \(\sum_{j\in V}p_j=1\).
+        \item Larger logits receive larger probabilities.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    \footnotesize
+    \renewcommand{\arraystretch}{1.12}
+    \begin{tabular}{cccc}
+      \toprule
+      Candidate token & Logit \(z_j\) & \(e^{z_j}\) & Probability \(p_j\) \\
+      \midrule
+      \texttt{cat}  & \(2.0\) & \(7.39\) & \(0.67\) \\
+      \texttt{dog}  & \(1.0\) & \(2.72\) & \(0.24\) \\
+      \texttt{runs} & \(0.0\) & \(1.00\) & \(0.09\) \\
+      \midrule
+      & & \(11.11\) & \(1.00\) \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{-1.4em}
+  \begin{alertblock}{Connecting probabilities to the loss}
+    \footnotesize
+    If the correct token is \texttt{cat}, then \(p_y=0.67\) and
+    \(L=-\log(0.67)\approx0.40\).
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Why does \(e\) appear in softmax?}
+  \small
+  \begin{center}
+    \large\itshape
+    ``That's a great question, because the answer isn't
+    \emph{'because mathematicians like \(e\)'}''.
+  \end{center}
+
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum height=1.0cm,
+        minimum width=2.9cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder] (scores)
+        {logits\\\(z_j\in\mathbb R\)};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.7cm of scores] (weights)
+        {exponentiate\\\(w_j=e^{z_j}>0\)};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.7cm of weights] (probabilities)
+        {normalize\\\(p_j=\dfrac{w_j}{\sum_k w_k}\)};
+      \draw[->, thick] (scores) -- (weights);
+      \draw[->, thick] (weights) -- (probabilities);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-1em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Why an exponential?}
+        \small
+        It is positive, preserves order, and a common shift cancels:
+        \[
+          \frac{e^{z_j+c}}{\sum_k e^{z_k+c}}
+          =\frac{e^c e^{z_j}}{e^c\sum_k e^{z_k}}
+          =\frac{e^{z_j}}{\sum_k e^{z_k}}.
+        \]
+        Only differences between logits affect the probabilities.
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Why specifically base \(e\)?}
+        \small
+        Any base \(a>1\) could work, since
+        \[
+          a^z=e^{(\ln a)z}.
+        \]
+        The base only rescales the logits. But
+        \[
+          \frac{d}{dz}a^z=(\ln a)a^z,
+          \qquad
+          \frac{d}{dz}e^z=e^z.
+        \]
+        Base \(e\) removes the extra factor, keeping learning gradients clean.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Embeddings turn usage into geometry}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=0.78, >=Latex]
+        \draw[->, gray] (0,0) -- (6.0,0);
+        \draw[->, gray] (0,0) -- (0,4.5);
+
+        \foreach \point in {
+          (1.1,3.4),(2.2,3.5),(1.6,2.7),(2.7,2.8),
+          (4.6,1.2),(5.1,1.7)
+        } {
+          \draw[->, thin, gray!45] (0,0) -- \point;
+        }
+
+        \fill[tokenblueborder] (1.1,3.4) circle (2.5pt)
+          node[above left]{\texttt{cat}};
+        \fill[tokenblueborder] (2.2,3.5) circle (2.5pt)
+          node[above]{\texttt{dog}};
+        \fill[tokenblueborder] (1.6,2.7) circle (2.5pt)
+          node[below left]{\texttt{kitten}};
+        \fill[tokenblueborder] (2.7,2.8) circle (2.5pt)
+          node[below right]{\texttt{puppy}};
+
+        \draw[->, very thick, tensorpurpleborder] (1.1,3.4) -- (1.6,2.7)
+          node[midway, left, font=\scriptsize] {\(\Delta\)};
+        \draw[->, very thick, tensorpurpleborder] (2.2,3.5) -- (2.7,2.8)
+          node[midway, right, font=\scriptsize] {\(\Delta\)};
+
+        \fill[tokenorangeborder] (4.6,1.2) circle (2.5pt)
+          node[below]{\texttt{car}};
+        \fill[tokenorangeborder] (5.1,1.7) circle (2.5pt)
+          node[above]{\texttt{truck}};
+
+      \end{tikzpicture}
+
+      \vspace{-0.3em}
+      {\scriptsize
+      \(
+        \begin{aligned}
+          \mathbf{e}_{\text{puppy}}-\mathbf{e}_{\text{dog}}
+            &\approx \boldsymbol{\Delta},\\
+          \mathbf{e}_{\text{kitten}}-\mathbf{e}_{\text{cat}}
+            &\approx \boldsymbol{\Delta}.
+        \end{aligned}
+      \)}
+
+      \smallskip
+      \textbf{Both arrows show the same relative move:}
+      adult animal \(\rightarrow{}\) young animal.
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      Tokens used in similar contexts often acquire related locations.
+
+      \vspace{0.8em}
+      Cosine similarity measures directional similarity:
+      \[
+        \cos(\mathbf{a},\mathbf{b})=
+        \frac{\mathbf{a}\cdot\mathbf{b}}
+        {\lVert\mathbf{a}\rVert\lVert\mathbf{b}\rVert}.
+      \]
+
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.3em}
+  \begin{alertblock}{Measure, not objective}
+    \footnotesize
+    Next-token cross-entropy is the training objective; cosine similarity only
+    inspects learned geometry. Lookup embeddings are static; contextual
+    representations come later.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Scale example: the GPT-3 175B embedding matrix}
+  \small
+  The largest GPT-3 model uses a vocabulary of \(50{,}257\) tokens and an
+  embedding dimension of \(d=12{,}288\).
+
+  \[
+    W_E\in\mathbb R^{12{,}288\times 50{,}257}
+    \qquad
+    \text{(\(d\) rows, one column per token).}
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[>=Latex]
+      \fill[tokengreen] (0,0) rectangle (8.3,2.35);
+      \draw[tokengreenborder, thick] (0,0) rectangle (8.3,2.35);
+
+      \foreach \x in {0.65,1.3,1.95,6.35,7.0,7.65} {
+        \draw[tokengreenborder!55] (\x,0) -- (\x,2.35);
+      }
+      \foreach \y in {0.47,0.94,1.41,1.88} {
+        \draw[tokengreenborder!35] (0,\y) -- (8.3,\y);
+      }
+
+      \node[font=\Large] at (4.15,1.38) {\(W_E\)};
+      \node at (4.15,0.72) {\(617{,}558{,}016\) learned entries};
+      \node at (4.15,2.0) {\(\cdots\)};
+
+      \draw[<->, thick] (0,-0.35) -- (8.3,-0.35)
+        node[midway, below] {\(|V|=50{,}257\) token columns};
+      \draw[<->, thick] (-0.35,0) -- (-0.35,2.35)
+        node[midway, above, rotate=90] {\(d=12{,}288\) rows};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.65em}
+  \begin{alertblock}{Parameter count and matching dimensions}
+    \footnotesize
+    \centering
+    \(50{,}257\times12{,}288
+      =\boxed{617{,}558{,}016}\approx 618\text{ million parameters}\).
+
+    \smallskip
+    For GPT-3, \(W_U\) has the same shape as \(W_E\):
+    \(W_U,W_E\in\mathbb R^{12{,}288\times50{,}257}\).
+    Equal shape does not mean equal entries.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering
+  \vfill
+
+  {\Huge Short break}
+
+  \vspace{1.2em}
+  {\large Tokens \(\rightarrow{}\) IDs \(\rightarrow{}\) embeddings \(\rightarrow{}\)
+  next-token loss \quad \checkmark}
+
+  \vspace{2.0em}
+  {\Large Next: inside the Transformer}
+
+  \vspace{0.5em}
+  {\normalsize How do token representations exchange context?}
+
+  \vfill
+\end{frame}
+
+\begin{frame}{A token sequence becomes a matrix}
+  \small
+  \begin{center}
+    \tokenbox{the}\quad\tokenbox{cat}\quad\tokenbox{sleeps}
+    \(\quad\longrightarrow\quad{}\)
+    \([12,51,908]\)
+  \end{center}
+
+  \vspace{0.3em}
+  Each ID selects one column from \(W_E\). Stacking the transposed vectors gives
+  \[
+    X=
+    \begin{bmatrix}
+      \mathbf{e}_{12}^{\mathsf T}\\
+      \mathbf{e}_{51}^{\mathsf T}\\
+      \mathbf{e}_{908}^{\mathsf T}
+    \end{bmatrix}
+    \in\mathbb{R}^{n\times d},
+    \qquad n=3.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[>=Latex, node distance=0.55cm]
+      \node[draw=tokenblueborder, fill=tokenblue, rounded corners,
+        minimum width=3.1cm] (sequence) {one sequence: \(n\times d\)};
+      \node[draw=tensorpurpleborder, fill=tensorpurple, rounded corners,
+        right=4.0cm of sequence, minimum width=3.4cm] (batch)
+        {batch: \(T\in\mathbb{R}^{b\times n\times d}\)};
+      \draw[->, thick] (sequence) -- node[above]{stack \(b\) sequences} (batch);
+    \end{tikzpicture}
+  \end{center}
+
+  {\scriptsize Sequences in a batch are commonly padded to a shared length;
+  a mask tells later layers which positions are padding.}
+\end{frame}
+
+\section{Transformers and attention}
+
+\begin{frame}{From token vectors to contextual vectors}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum width=2.1cm,
+        minimum height=0.8cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder] (tokens) {tokens};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.55cm of tokens] (ids) {IDs};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.55cm of ids] (vectors) {embeddings};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.55cm of vectors] (transformer) {Transformer\\?};
+      \draw[->, thick] (tokens) -- (ids);
+      \draw[->, thick] (ids) -- (vectors);
+      \draw[->, thick] (vectors) -- (transformer);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.8em}
+  The embedding lookup gives \tokenbox{bank} the same starting vector in both
+  sentences:
+  \begin{itemize}
+    \item ``They sat on the river \textbf{bank}''.
+    \item ``She deposited money at the \textbf{bank}''.
+  \end{itemize}
+
+  \begin{alertblock}{The question for the next chapter}
+    How can every token exchange information with the other tokens so that its
+    vector reflects the surrounding context? Transformers answer this with
+    self-attention.
+  \end{alertblock}
+\end{frame}

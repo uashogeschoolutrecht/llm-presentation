@@ -1,0 +1,469 @@
+% !TEX root = ../main.tex
+
+\begin{frame}{Attention creates a context-dependent update}
+  \small
+  The lookup vector for \texttt{bank} starts identically in both sentences.
+  Attention lets it collect different clues from the surrounding tokens; we
+  denote the resulting contextual vector by $\mathbf h$.
+
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{River context}
+        \centering
+        \begin{tikzpicture}[>=Latex, node distance=0.18cm]
+          \node (river) {\tokenbox{river}};
+          \node[right=of river] (bank) {\tokenbox[tokengreen]{bank}};
+          \draw[->, very thick, tokenblueborder]
+            (bank.south) .. controls +(-0.35,-0.12) and +(0.35,-0.12) ..
+            (river.south);
+        \end{tikzpicture}
+
+        \[
+          \mathbf e_{\text{bank}}
+          \longrightarrow
+          \mathbf h_{\text{bank}}^{(\text{river})}
+        \]
+        The result incorporates information associated with a river edge.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Financial context}
+        \centering
+        \begin{tikzpicture}[>=Latex, node distance=0.18cm]
+          \node (money) {\tokenbox{money}};
+          \node[right=of money] (bank) {\tokenbox[tokengreen]{bank}};
+          \draw[->, very thick, tokenorangeborder]
+            (bank.south) .. controls +(-0.35,-0.12) and +(0.35,-0.12) ..
+            (money.south);
+        \end{tikzpicture}
+
+        \[
+          \mathbf e_{\text{bank}}
+          \longrightarrow
+          \mathbf h_{\text{bank}}^{(\text{money})}
+        \]
+        The result incorporates information associated with finance.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.4em}
+  \begin{alertblock}{The central idea}
+    \footnotesize
+    Each position asks which other positions matter, then mixes information
+    from them. The resulting vector is contextual rather than a static lookup.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Before attention: the model needs token order}
+  \small
+  A sentence is not merely a bag of tokens: changing the order changes the
+  meaning. A basic construction adds a position vector to every token vector:
+  \[
+    \mathbf x_i=\mathbf e_{\text{token}_i}+\mathbf p_i,
+    \qquad X\in\mathbb R^{n\times d}.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[
+      box/.style={draw, rounded corners=3pt, minimum width=2.1cm,
+        minimum height=0.75cm, align=center},
+      >=Latex
+    ]
+      \node[box, fill=tokenblue, draw=tokenblueborder] (token)
+        {token vector\\$\mathbf e_i$};
+      \node[box, fill=tokenorange, draw=tokenorangeborder,
+        right=1.0cm of token] (position) {position vector\\$\mathbf p_i$};
+      \node[right=0.42cm of token] (plus) {$+$};
+      \node[box, fill=tokengreen, draw=tokengreenborder,
+        right=1.0cm of position] (input) {input row\\$\mathbf x_i$};
+      \draw[->, thick] (position) -- (input);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{block}{Implementations differ}
+    Position information may be learned or fixed. Rotary position encodings
+    instead inject relative position when queries and keys are compared. The
+    shared goal is the same: make order available to attention.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Query, key, value: three roles for each token}
+  \small
+  Self-attention derives three vectors from every input position.
+
+  \begin{center}
+    \begin{tikzpicture}[
+      role/.style={draw, rounded corners=4pt, minimum width=3.35cm,
+        minimum height=1.45cm, align=center},
+      >=Latex
+    ]
+      \node[role, fill=tokenorange, draw=tokenorangeborder] (query)
+        {\textbf{Query $\mathbf q_i$}\\What information do\\I need?};
+      \node[role, fill=tokenblue, draw=tokenblueborder,
+        right=0.45cm of query] (key)
+        {\textbf{Key $\mathbf k_j$}\\What kind of information\\do I offer?};
+      \node[role, fill=tokengreen, draw=tokengreenborder,
+        right=0.45cm of key] (value)
+        {\textbf{Value $\mathbf v_j$}\\What information will\\I contribute?};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.6em}
+  For position $i$:
+  \begin{enumerate}
+    \item compare its query $\mathbf q_i$ with every allowed key $\mathbf k_j$;
+    \item turn the comparison scores into attention weights;
+    \item use those weights to combine the value vectors $\mathbf v_j$.
+  \end{enumerate}
+
+  \begin{alertblock}{Why ``self''-attention?}
+    Queries, keys, and values all come from the same sequence $X$.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Queries, keys, and values are learned projections}
+  \small
+  Three learned matrices give each input row three different roles:
+  \[
+    Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[
+      matrixbox/.style={draw, rounded corners=3pt, minimum height=0.9cm,
+        minimum width=2.25cm, align=center},
+      >=Latex
+    ]
+      \node[matrixbox, fill=tensorpurple, draw=tensorpurpleborder] (x)
+        {$X$\\$n\times d$};
+      \node[matrixbox, fill=tokenorange, draw=tokenorangeborder,
+        right=1.2cm of x, yshift=1.25cm] (q) {$Q=XW_Q$\\$n\times d_k$};
+      \node[matrixbox, fill=tokenblue, draw=tokenblueborder,
+        right=1.2cm of x] (k) {$K=XW_K$\\$n\times d_k$};
+      \node[matrixbox, fill=tokengreen, draw=tokengreenborder,
+        right=1.2cm of x, yshift=-1.25cm] (v) {$V=XW_V$\\$n\times d_v$};
+      \draw[->, thick] (x.east) -- (q.west)
+        node[midway, above, sloped] {$W_Q$};
+      \draw[->, thick] (x.east) -- (k.west)
+        node[midway, above] {$W_K$};
+      \draw[->, thick] (x.east) -- (v.west)
+        node[midway, below, sloped] {$W_V$};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-0.35em}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Shapes}
+        \scriptsize
+        \textbf{Weights:}
+        $W_Q,W_K\in\mathbb R^{d\times d_k}$,
+        $W_V\in\mathbb R^{d\times d_v}$.
+
+        \textbf{Outputs:}
+        $Q,K\in\mathbb R^{n\times d_k}$,
+        $V\in\mathbb R^{n\times d_v}$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{alertblock}{How are they learned?}
+        \scriptsize
+        There are no separate query, key, or value targets. Next-token
+        cross-entropy backpropagates through attention and updates
+        $W_Q,W_K,W_V$ with all other model weights.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Step 1: compare one query with every key}
+  \small
+  Suppose position $i$ contains \texttt{bank}. Its compatibility with an
+  allowed position $j$ is the scaled dot product
+  \[
+    s_{ij}=\frac{\mathbf q_i^{\mathsf T}\mathbf k_j}{\sqrt{d_k}}.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[
+      key/.style={draw, rounded corners=3pt, minimum width=2.2cm,
+        minimum height=0.72cm, align=center},
+      >=Latex
+    ]
+      \node[key, fill=tokenblue, draw=tokenblueborder] (the)
+        {key: \texttt{the}};
+      \node[key, fill=tokenorange, draw=tokenorangeborder,
+        right=1.0cm of the] (river) {key: \texttt{river}};
+      \node[key, fill=tokengreen, draw=tokengreenborder,
+        right=1.0cm of river] (bankkey) {key: \texttt{bank}};
+      \node[key, fill=tensorpurple, draw=tensorpurpleborder,
+        below=1.35cm of river] (bankquery) {query: \texttt{bank}};
+
+      \draw[->, tokenblueborder, line width=0.6pt] (bankquery) --
+        node[midway, left] {$s=0.2$} (the);
+      \draw[->, tokenorangeborder, line width=2.0pt] (bankquery) --
+        node[midway, right] {$s=2.0$} (river);
+      \draw[->, tokengreenborder, line width=0.9pt] (bankquery) --
+        node[midway, right] {$s=0.6$} (bankkey);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Interpretation}
+        A larger score means the query and key are more compatible. A score is
+        still an unrestricted number, not a probability.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Why divide by $\sqrt{d_k}$?}
+        Dot products tend to grow as vectors get wider. Scaling keeps scores in
+        a range where softmax remains responsive.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A causal mask prevents looking into the future}
+  \small
+  During next-token prediction, position $i$ may use only positions
+  $j\le i$. Forbidden scores are replaced by $-\infty$ before softmax.
+
+  \begin{columns}[c]
+    \begin{column}{0.50\textwidth}
+      \[
+        S=\frac{QK^{\mathsf T}}{\sqrt{d_k}}+M,
+        \qquad
+        M_{ij}=\begin{cases}
+          0 & j\le i,\\
+          -\infty & j>i.
+        \end{cases}
+      \]
+      Because $e^{-\infty}=0$, a masked position receives zero attention
+      weight.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \textbf{Rows attend to columns}
+
+      \vspace{0.4em}
+      \begin{tikzpicture}[x=0.78cm,y=0.68cm]
+        \foreach \r in {1,...,4} {
+          \foreach \c in {1,...,4} {
+            \ifnum\c>\r
+              \node[draw=gray!55, fill=gray!18, minimum size=0.62cm]
+                at (\c,-\r) {$-\infty$};
+            \else
+              \node[draw=tokenblueborder, fill=tokenblue, minimum size=0.62cm]
+                at (\c,-\r) {$s_{\r\c}$};
+            \fi
+          }
+        }
+        \foreach \i/\t in {1/the,2/river,3/bank,4/rose} {
+          \node[font=\scriptsize, rotate=45, anchor=west] at (\i,-0.35)
+            {\texttt{\t}};
+          \node[font=\scriptsize, anchor=east] at (0.45,-\i)
+            {\texttt{\t}};
+        }
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{No information leakage}
+    The representation at position $i$ uses tokens $1,\ldots,i$ to predict
+    token $i+1$. It cannot depend on token $i+1$ or anything after it.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Step 2: softmax turns scores into attention weights}
+  \small
+  For a fixed query position $i$, normalize its allowed scores across $j$:
+  \[
+    \alpha_{ij}=\frac{e^{s_{ij}}}{\sum_{\ell\le i}e^{s_{i\ell}}},
+    \qquad \alpha_{ij}>0,
+    \qquad \sum_{j\le i}\alpha_{ij}=1.
+  \]
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c}
+      Key token & Score $s_{ij}$ & $e^{s_{ij}}$ & Weight $\alpha_{ij}$ \\
+      \hline
+      \texttt{the}   & $0.2$ & $1.22$ & $0.12$ \\
+      \texttt{river} & $2.0$ & $7.39$ & $0.71$ \\
+      \texttt{bank}  & $0.6$ & $1.82$ & $0.17$ \\
+      \hline
+      & & $10.43$ & $1.00$
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{What the weights say}
+    For this illustrative head, \texttt{bank} assigns most of its attention to
+    \texttt{river}. Softmax makes the comparison relative: all allowed tokens
+    compete for a fixed total weight of $1$.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Step 3: combine values into contextual information}
+  \small
+  The weights decide how much of every value vector reaches position $i$:
+  \[
+    \mathbf z_i=\sum_{j\le i}\alpha_{ij}\mathbf v_j.
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[
+      value/.style={draw, rounded corners=3pt, minimum width=2.0cm,
+        minimum height=0.72cm, fill=tokengreen, draw=tokengreenborder},
+      >=Latex
+    ]
+      \node[value] (the) {$\mathbf v_{\text{the}}$};
+      \node[value, right=1.0cm of the] (river) {$\mathbf v_{\text{river}}$};
+      \node[value, right=1.0cm of river] (bank) {$\mathbf v_{\text{bank}}$};
+      \node[draw=tensorpurpleborder, fill=tensorpurple, rounded corners=3pt,
+        below=1.35cm of river, minimum width=2.7cm, minimum height=0.8cm]
+        (output) {$\mathbf z_{\text{bank}}$};
+
+      \draw[->, line width=0.5pt, tokenblueborder] (the) --
+        node[left, font=\scriptsize] {$0.12$} (output);
+      \draw[->, line width=2.2pt, tokenorangeborder] (river) --
+        node[right, font=\scriptsize] {$0.71$} (output);
+      \draw[->, line width=0.9pt, tokengreenborder] (bank) --
+        node[right, font=\scriptsize] {$0.17$} (output);
+    \end{tikzpicture}
+  \end{center}
+
+  \[
+    \mathbf z_{\text{bank}}
+    =0.12\mathbf v_{\text{the}}
+     +0.71\mathbf v_{\text{river}}
+     +0.17\mathbf v_{\text{bank}}.
+  \]
+
+  \vspace{-0.7em}
+  \begin{alertblock}{The context has entered the vector}
+    \footnotesize
+    The update for \texttt{bank} now contains substantial information from
+    \texttt{river}. Different contexts yield different weights and therefore
+    different updates.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{All positions at once: the attention equation}
+  \small
+  The per-token operations combine into one matrix expression:
+  \[
+    \boxed{\operatorname{Attention}(Q,K,V)
+      =\operatorname{softmax}\!\left(
+        \frac{QK^{\mathsf T}}{\sqrt{d_k}}+M
+      \right)V}
+  \]
+
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum width=2.45cm,
+        minimum height=1.0cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenorange, draw=tokenorangeborder] (scores)
+        {scores\\$QK^{\mathsf T}$\\$n\times n$};
+      \node[stage, fill=tokenblue, draw=tokenblueborder,
+        right=0.65cm of scores] (weights)
+        {mask + softmax\\$A$\\$n\times n$};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.65cm of weights] (values)
+        {mix values\\$AV$\\$n\times d_v$};
+      \draw[->, thick] (scores) -- (weights);
+      \draw[->, thick] (weights) -- (values);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{block}{Reading the shape}
+    The $n\times n$ matrix $A$ contains one attention distribution per row.
+    Multiplying by $V$ produces one contextual update for every position.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Multi-head attention learns several relationships}
+  \small
+  One attention pattern need not capture every useful relationship. A
+  Transformer runs $H$ attention heads with separate learned projections.
+
+  \begin{center}
+    \begin{tikzpicture}[
+      head/.style={draw, rounded corners=3pt, minimum width=3.05cm,
+        minimum height=1.0cm, align=center},
+      >=Latex
+    ]
+      \node[head, fill=tokenblue, draw=tokenblueborder] (h1)
+        {head 1\\nearby syntax?};
+      \node[head, fill=tokenorange, draw=tokenorangeborder,
+        right=0.45cm of h1] (h2) {head 2\\subject relation?};
+      \node[head, fill=tokengreen, draw=tokengreenborder,
+        right=0.45cm of h2] (h3) {head 3\\semantic clue?};
+      \node[draw=tensorpurpleborder, fill=tensorpurple, rounded corners=3pt,
+        below=1.05cm of h2, minimum width=4.0cm, minimum height=0.8cm]
+        (combine) {concatenate and project with $W_O$};
+      \draw[->, thick] (h1) -- (combine);
+      \draw[->, thick] (h2) -- (combine);
+      \draw[->, thick] (h3) -- (combine);
+    \end{tikzpicture}
+  \end{center}
+
+  \[
+    \operatorname{MultiHead}(X)
+      =\operatorname{Concat}(\text{head}_1,\ldots,\text{head}_H)W_O.
+  \]
+
+  \begin{alertblock}{Interpret the labels as intuition}
+    Heads are not assigned these jobs by hand; training learns their behavior,
+    and real heads may mix several kinds of relationships.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Attention is the communication step in a Transformer block}
+  \small
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum width=2.15cm,
+        minimum height=0.78cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder] (input) {$X$};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.38cm of input] (attention) {causal\\self-attention};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.38cm of attention] (res1) {add residual\\+ normalize};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.38cm of res1] (mlp) {per-token\\MLP};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.38cm of mlp] (res2) {add residual\\+ normalize};
+      \draw[->, thick] (input) -- (attention);
+      \draw[->, thick] (attention) -- (res1);
+      \draw[->, thick] (res1) -- (mlp);
+      \draw[->, thick] (mlp) -- (res2);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.8em}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Across positions}
+        Self-attention moves information between tokens. The causal mask
+        preserves next-token prediction.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Within each position}
+        The MLP transforms each token vector independently. Residual paths help
+        preserve and refine existing information.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Depth builds richer context}
+    Stacking many blocks lets information travel and be transformed repeatedly,
+    producing the contextual representations used to predict the next token.
+  \end{alertblock}
+\end{frame}

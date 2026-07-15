@@ -1,4 +1,6 @@
 {
+  "flake8.cwd": "${workspaceFolder}",
+  "flake8.path": ["uv", "run", "--frozen", "flake8"],
   "latex-workshop.latex.autoBuild.run": "onSave",
   "latex-workshop.latex.outDir": "%DIR%/build"
 }

@@ -27,6 +27,35 @@
 \definecolor{tensorpurple}{HTML}{EEE6F7}
 \definecolor{tensorpurpleborder}{HTML}{6A3D9A}
 
+% Give each major topic a clear, consistent chapter boundary.
+\AtBeginSection[]{
+  \begingroup
+  \setbeamercolor{background canvas}{bg=tokenblueborder}
+  \begin{frame}[plain,noframenumbering]
+    \color{white}
+    \vfill
+    \centering
+    {\large\bfseries\MakeUppercase{Chapter \insertsectionnumber}\par}
+
+    \vspace{0.7em}
+    {\usebeamerfont{title}\Huge\bfseries\insertsectionhead\par}
+
+    \vspace{1.0em}
+    \rule{0.36\textwidth}{1.2pt}
+
+    \vspace{1.0em}
+    {\large
+      \ifcase\insertsectionnumber
+      \or From text to the discrete units a model can process
+      \or From token IDs to learned numerical representations
+      \or From static vectors to context-aware representations
+      \fi
+      \par}
+    \vfill
+  \end{frame}
+  \endgroup
+}
+
 \newcommand{\tokenbox}[2][tokenblue]{%
   \tikz[baseline= (token.base)]{%
     \node[

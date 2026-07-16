@@ -88,7 +88,60 @@
 \input{sections/02-embeddings}
 \input{sections/03-attention}
 
-\begin{frame}{Recommended next step: dive deeper with 3Blue1Brown}
+\begin{frame}{Try it yourself: the \texttt{my-llm} notebook}
+  The companion notebook turns the ideas from this presentation into a small,
+  working Shakespeare language model.
+
+  \vspace{0.6em}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{What you will explore}
+        \begin{itemize}
+          \item character-level and BPE tokenization;
+          \item training and validation batches;
+          \item a small Transformer model;
+          \item Shakespeare-like text generation.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Get started}
+        \begin{columns}[c,onlytextwidth]
+          \begin{column}{0.62\linewidth}
+            \footnotesize
+            From the repository root, run:
+
+            \smallskip
+            \texttt{./setup.sh} (Linux/macOS), or
+
+            \smallskip
+            \texttt{.}\textbackslash\texttt{setup.ps1} (Windows PowerShell).
+
+            \smallskip
+            Then open \texttt{my-llm.ipynb}, select the project's
+            \texttt{.venv} kernel, and run the cells from top to bottom.
+          \end{column}
+          \begin{column}{0.34\linewidth}
+            \centering
+            \begin{tikzpicture}
+              \clip (0,0) rectangle (\linewidth,\linewidth);
+              \node[anchor=north west,inner sep=0] at (0,\linewidth) {%
+                \includesvg[width=20\linewidth]{assets/images/qrcode}%
+              };
+            \end{tikzpicture}
+          \end{column}
+        \end{columns}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vfill
+  \centering
+  \small Start with the character tokenizer, then switch to BPE and compare
+  the generated results.
+\end{frame}
+
+\begin{frame}{Dive deeper with 3Blue1Brown}
   \small
   Start with the short LLM primer between Chapters 4 and 5, then continue with
   Chapters 5 and 6 of 3Blue1Brown's \emph{Neural Networks} lecture series.

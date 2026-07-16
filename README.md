@@ -57,7 +57,8 @@ cd presentation
 latexmk main.tex
 ```
 
-The compiled presentation is written to `presentation/build/main.pdf`.
+The compiled presentation is written to `presentation/main.pdf`. Intermediate
+build files are kept in `presentation/build/`.
 
 To remove auxiliary build files while keeping the PDF:
 

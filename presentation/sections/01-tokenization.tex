@@ -1,6 +1,6 @@
 % !TEX root = ../main.tex
 
-\section{Tokens}
+\section{Tokens}\label{sec:tokens}
 
 \begin{frame}{An LLM is a next-token predictor}
   \small
@@ -99,6 +99,7 @@
     A model processes a sequence of numbered units. The tokenizer decides
     where one unit ends and the next begins.
   \end{block}
+
 \end{frame}
 
 \begin{frame}{Text can be split in different ways}
@@ -111,7 +112,19 @@
       \tokenbox{u}\,\tokenbox{n}\,\tokenbox{b}\,\tokenbox{e}\,
       \tokenbox{l}\,\tokenbox{i}\,\tokenbox{e}\,\tokenbox{v}\,
       \tokenbox{a}\,\tokenbox{b}\,\tokenbox{l}\,\tokenbox{e}\,
-      \tokenbox{!} \\[0.8em]
+      \tokenbox{!}
+  \end{tabular}
+
+  \vspace{-0.3em}
+  \begin{exampleblock}{Follow along in the notebook}
+    \scriptsize
+    Under \textbf{Tokens}, find \emph{An extremely simple tokenizer / de-tokenizer}.
+    Its \texttt{stoi} mapping and \texttt{encode} function implement the
+    character split above as a first, naive attempt at encoding text as integers.
+  \end{exampleblock}
+  \vspace{0.5em}
+
+  \begin{tabular}{@{}p{2.2cm}p{8.8cm}@{}}
     \textbf{Words} &
       \tokenbox[tokenorange]{unbelievable}\,\tokenbox[tokenorange]{!}
       \\[0.8em]
@@ -127,8 +140,8 @@
     character or a complete word.
   \end{alertblock}
 
-  {\scriptsize The subword split above is illustrative; the result depends on
-  the tokenizer and its training data.}
+  {\tiny The subword split above is illustrative; the result depends on the
+  tokenizer and its training data.}
 \end{frame}
 
 \begin{frame}{How repeated strings become tokens: toy BPE}

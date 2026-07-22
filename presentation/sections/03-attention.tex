@@ -1,6 +1,44 @@
 % !TEX root = ../main.tex
 
-\begin{frame}{Attention creates a context-dependent update}
+\section{Transformers and attention}\label{sec:attention}
+
+\begin{frame}{From token vectors to contextual vectors}
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={draw, rounded corners=3pt, minimum width=2.1cm,
+        minimum height=0.8cm, align=center},
+      >=Latex
+    ]
+      \node[stage, fill=tokenblue, draw=tokenblueborder] (tokens) {tokens};
+      \node[stage, fill=tokenorange, draw=tokenorangeborder,
+        right=0.55cm of tokens] (ids) {IDs};
+      \node[stage, fill=tokengreen, draw=tokengreenborder,
+        right=0.55cm of ids] (vectors) {embeddings};
+      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
+        right=0.55cm of vectors] (transformer) {Transformer\\?};
+      \draw[->, thick] (tokens) -- (ids);
+      \draw[->, thick] (ids) -- (vectors);
+      \draw[->, thick] (vectors) -- (transformer);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.8em}
+  The embedding lookup gives \tokenbox{bank} the same starting vector in both
+  sentences:
+  \begin{itemize}
+    \item ``They sat on the river \textbf{bank}''.
+    \item ``She deposited money at the \textbf{bank}''.
+  \end{itemize}
+
+  \begin{alertblock}{The problem self-attention solves}
+    How can every token exchange information with the other tokens so that its
+    vector reflects the surrounding context? The following slides build the
+    mathematical mechanism that makes this possible.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Attention creates a context-dependent update
+  \hfill{\tiny \texttt{Head.forward}: lines 15--31}}
   \small
   The lookup vector for \texttt{bank} starts identically in both sentences.
   Attention lets it collect different clues from the surrounding tokens; we
@@ -55,7 +93,8 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Before attention: the model needs token order}
+\begin{frame}{Before attention: the model needs token order
+  \hfill{\tiny \texttt{BigramLanguageModel.forward}: lines 18--23}}
   \small
   A sentence is not merely a bag of tokens: changing the order changes the
   meaning. A basic construction adds a position vector to every token vector:
@@ -88,7 +127,8 @@
   \end{block}
 \end{frame}
 
-\begin{frame}{Query, key, value: three roles for each token}
+\begin{frame}{Query, key, value: three roles for each token
+  \hfill{\tiny \texttt{Head}: lines 8--10, 17--30}}
   \small
   Self-attention derives three vectors from every input position.
 
@@ -122,7 +162,8 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Queries, keys, and values are learned projections}
+\begin{frame}{Queries, keys, and values are learned projections
+  \hfill{\tiny \texttt{Head}: lines 8--10, 17--18, 29}}
   \small
   Three learned matrices give each input row three different roles:
   \[
@@ -177,7 +218,8 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Step 1: compare one query with every key}
+\begin{frame}{Step 1: compare one query with every key
+  \hfill{\tiny \texttt{Head.forward}: lines 20--22}}
   \small
   Suppose position $i$ contains \texttt{bank}. Its compatibility with an
   allowed position $j$ is the scaled dot product
@@ -225,7 +267,8 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{A causal mask prevents looking into the future}
+\begin{frame}{A causal mask prevents looking into the future
+  \hfill{\tiny \texttt{Head}: lines 11, 23--25}}
   \small
   During next-token prediction, position $i$ may use only positions
   $j\le i$. Forbidden scores are replaced by $-\infty$ before softmax.
@@ -276,7 +319,8 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Step 2: softmax turns scores into attention weights}
+\begin{frame}{Step 2: softmax turns scores into attention weights
+  \hfill{\tiny \texttt{Head.forward}: lines 26--27}}
   \small
   For a fixed query position $i$, normalize its allowed scores across $j$:
   \[
@@ -293,6 +337,7 @@
       \texttt{the}   & $0.2$ & $1.22$ & $0.12$ \\
       \texttt{river} & $2.0$ & $7.39$ & $0.71$ \\
       \texttt{bank}  & $0.6$ & $1.82$ & $0.17$ \\
+      \texttt{rose}  & $-\infty$ & $0$ & $0$ \\
       \hline
       & & $10.43$ & $1.00$
     \end{tabular}
@@ -305,7 +350,8 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Step 3: combine values into contextual information}
+\begin{frame}{Step 3: combine values into contextual information
+  \hfill{\tiny \texttt{Head.forward}: lines 29--30}}
   \small
   The weights decide how much of every value vector reaches position $i$:
   \[
@@ -350,7 +396,8 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{All positions at once: the attention equation}
+\begin{frame}{All positions at once: the attention equation
+  \hfill{\tiny \texttt{Head.forward}: lines 17--30}}
   \small
   The per-token operations combine into one matrix expression:
   \[
@@ -385,7 +432,8 @@
   \end{block}
 \end{frame}
 
-\begin{frame}{Multi-head attention learns several relationships}
+\begin{frame}{Multi-head attention learns several relationships
+  \hfill{\tiny \texttt{MultiHeadAttention}: lines 34--46}}
   \small
   One attention pattern need not capture every useful relationship. A
   Transformer runs $H$ attention heads with separate learned projections.

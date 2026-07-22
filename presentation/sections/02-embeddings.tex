@@ -1,6 +1,6 @@
 % !TEX root = ../main.tex
 
-\section{Vectors and embeddings}
+\section{Vectors and embeddings}\label{sec:embeddings}
 
 \begin{frame}{Scalar, vector, matrix, tensor}
   \small
@@ -537,41 +537,4 @@
 
   {\scriptsize Sequences in a batch are commonly padded to a shared length;
   a mask tells later layers which positions are padding.}
-\end{frame}
-
-\section{Transformers and attention}
-
-\begin{frame}{From token vectors to contextual vectors}
-  \begin{center}
-    \begin{tikzpicture}[
-      stage/.style={draw, rounded corners=3pt, minimum width=2.1cm,
-        minimum height=0.8cm, align=center},
-      >=Latex
-    ]
-      \node[stage, fill=tokenblue, draw=tokenblueborder] (tokens) {tokens};
-      \node[stage, fill=tokenorange, draw=tokenorangeborder,
-        right=0.55cm of tokens] (ids) {IDs};
-      \node[stage, fill=tokengreen, draw=tokengreenborder,
-        right=0.55cm of ids] (vectors) {embeddings};
-      \node[stage, fill=tensorpurple, draw=tensorpurpleborder,
-        right=0.55cm of vectors] (transformer) {Transformer\\?};
-      \draw[->, thick] (tokens) -- (ids);
-      \draw[->, thick] (ids) -- (vectors);
-      \draw[->, thick] (vectors) -- (transformer);
-    \end{tikzpicture}
-  \end{center}
-
-  \vspace{0.8em}
-  The embedding lookup gives \tokenbox{bank} the same starting vector in both
-  sentences:
-  \begin{itemize}
-    \item ``They sat on the river \textbf{bank}''.
-    \item ``She deposited money at the \textbf{bank}''.
-  \end{itemize}
-
-  \begin{alertblock}{The problem self-attention solves}
-    How can every token exchange information with the other tokens so that its
-    vector reflects the surrounding context? The following slides build the
-    mathematical mechanism that makes this possible.
-  \end{alertblock}
 \end{frame}

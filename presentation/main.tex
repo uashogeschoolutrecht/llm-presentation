@@ -49,7 +49,6 @@
       \or{} From text to the discrete units a model can process
       \or{} From token IDs to learned numerical representations
       \or{} From static vectors to context-aware representations
-      \or{} From mathematical concepts to a working language model
       \fi
       \par}
     \vfill
@@ -81,32 +80,13 @@
   \titlepage{}
 \end{frame}
 
-\begin{frame}{Agenda}
-  \tableofcontents
-\end{frame}
+\begin{frame}{Follow along in the \texttt{my-llm} notebook}
+  The companion notebook builds a small Shakespeare language model. Keep it
+  open during the presentation: its three main sections use the same names as
+  the chapters in these slides.
 
-\input{sections/01-tokenization}
-\input{sections/02-embeddings}
-\input{sections/03-attention}
-
-\section{Try it yourself}
-
-\begin{frame}{Try it yourself: the \texttt{my-llm} notebook}
-  The companion notebook turns the ideas from this presentation into a small,
-  working Shakespeare language model.
-
-  \vspace{0.6em}
+  \vspace{0.5em}
   \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-      \begin{block}{What you will explore}
-        \begin{itemize}
-          \item character-level and BPE tokenization;
-          \item training and validation batches;
-          \item a small Transformer model;
-          \item Shakespeare-like text generation.
-        \end{itemize}
-      \end{block}
-    \end{column}
     \begin{column}{0.48\textwidth}
       \begin{block}{Get started}
         \begin{columns}[c,onlytextwidth]
@@ -121,8 +101,8 @@
             \texttt{.}\textbackslash\texttt{setup.ps1} (Windows PowerShell).
 
             \smallskip
-            Then open \texttt{my-llm.ipynb}, select the project's
-            \texttt{.venv} kernel, and run the cells from top to bottom.
+            Open \texttt{my-llm.ipynb} and select the project's
+            \texttt{.venv} kernel.
           \end{column}
           \begin{column}{0.34\linewidth}
             \centering
@@ -134,15 +114,37 @@
             \end{tikzpicture}
           \end{column}
         \end{columns}
+
+        \medskip
+        \centering
+        \scriptsize
+        \url{https://github.com/uashogeschoolutrecht/llm-presentation}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Find the code as we go}
+        \begin{enumerate}
+          \item \hyperlink{sec:tokens}{\textbf{Tokens}}
+          \item \hyperlink{sec:embeddings}{\textbf{Vectors and embeddings}}
+          \item \hyperlink{sec:attention}{\textbf{Transformers and attention}}
+        \end{enumerate}
+
+        \footnotesize
+        Run the cells from top to bottom. Start with the character tokenizer,
+        then switch to BPE and compare the generated results.
+
+        \smallskip
+        \textbf{Tip: show line numbers.} If they are hidden, press
+        \texttt{Esc} to enter command mode, then \texttt{Shift+L} to toggle
+        them for the whole notebook (Windows and macOS).
       \end{block}
     \end{column}
   \end{columns}
-
-  \vfill
-  \centering
-  \small Start with the character tokenizer, then switch to BPE and compare
-  the generated results.
 \end{frame}
+
+\input{sections/01-tokenization}
+\input{sections/02-embeddings}
+\input{sections/03-attention}
 
 \begin{frame}{Dive deeper with 3Blue1Brown}
   \small

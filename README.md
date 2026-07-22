@@ -1,10 +1,12 @@
 # LLM Presentation
 
-This repository contains a self-contained Beamer presentation in
-`presentation/` and a companion notebook, `my-llm.ipynb`, that builds and
-trains a small Shakespeare language model.
+This repository contains a Beamer presentation in `presentation/` and a
+companion notebook, `my-llm.ipynb`, that builds and trains a small Shakespeare
+language model. The notebook is designed to stay open during the talk: the
+slides and notebook use the same three-part structure, and the attention slides
+point to the relevant notebook line numbers.
 
-## Use the notebook
+## Follow the presentation in the notebook
 
 Set up the Python environment from the repository root:
 
@@ -26,22 +28,30 @@ JupyterLab from the command line without adding it permanently to the project:
 uv run --with jupyterlab jupyter lab my-llm.ipynb
 ```
 
-Run the cells from top to bottom. The notebook:
+Keep the notebook open beside the presentation and use its linked roadmap to
+jump between the same three parts:
 
-- downloads the Tiny Shakespeare dataset to `input.txt`;
-- demonstrates two tokenizers: an extremely simple character-level tokenizer
-  and a byte-level Byte Pair Encoding (BPE) tokenizer;
-- prepares training and validation batches;
-- defines and trains a small Transformer language model; and
-- generates Shakespeare-like text.
+| Presentation chapter | Notebook section | Code to inspect |
+| --- | --- | --- |
+| Tokens | **Tokens** | Character-to-integer encoding and byte-level BPE |
+| Vectors and embeddings | **Vectors and embeddings** | Token and position embeddings, tensors, and the output projection |
+| Transformers and attention | **Transformers and attention** | Queries, keys, values, causal masking, softmax, value aggregation, and multi-head attention |
 
-The character-level tokenizer is active by default and maps every distinct
-character directly to an integer ID. The BPE tokenizer is the implementation of
-the Byte Pair Encoding approach introduced in the presentation: it starts with
-individual bytes and repeatedly merges frequently occurring adjacent pairs into
-new tokens. To use it for the language model, uncomment the `encode` and
-`decode` assignments at the end of the BPE tokenizer cell before running the
-remaining cells.
+Run the cells from top to bottom. In VS Code, line numbers make it easier to
+follow the code references printed on slides 20–29. Select a notebook cell,
+press `Esc` to enter command mode, and press `Shift+L` to toggle line numbers
+for the entire notebook on Windows or macOS.
+
+The notebook downloads the Tiny Shakespeare dataset to `input.txt`, prepares
+training and validation batches, trains the small Transformer, and generates
+Shakespeare-like text.
+
+The **Tokens** section first introduces a deliberately naive character-level
+encoder that maps each distinct character directly to an integer ID. The next
+cells define a byte-level Byte Pair Encoding (BPE) tokenizer, train it, and
+reassign `encode` and `decode` to use BPE. To train with the character tokenizer
+first, skip the BPE activation cell and run the remaining cells; then run the BPE
+cell and rerun the downstream model cells to compare the results.
 
 The dataset download requires an internet connection. Model training uses CUDA
 when it is available and otherwise runs on the CPU; the default 5,000 training
